@@ -5,7 +5,9 @@ description: >
   native git commands (no Python scripts, no pip installs) to analyze commit
   history, then leverages AI to generate a sharp, data-driven developer
   portrait covering commit habits, work habits, development efficiency,
-  code style, code quality, and a "slacking index" for each contributor.
+  code style, code quality, and an engagement index for each contributor.
+  All user inputs are validated against strict allowlists before being used
+  in shell commands. No developer emails are collected.
 author: reky
 license: MIT
 acceptLicenseTerms: true
@@ -15,7 +17,7 @@ tags:
   - developer-profiling
   - zero-dependency
   - commit-patterns
-  - slacking-index
+  - engagement-index
 
 runtime: ai
 entry: SKILL.md

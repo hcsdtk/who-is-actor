@@ -4,28 +4,64 @@ license: MIT
 description: >
   This skill should be used when the user wants to analyze a Git repository
   and profile each developer's commit habits, work habits, development
-  efficiency, code style, code quality, and slacking index — all without
+  efficiency, code style, code quality, and engagement index — all without
   installing any dependencies or running any scripts. It relies purely on
   native git CLI commands and AI-driven interpretation. Trigger phrases
-  include "analyze repository" "profile developers" "who is slacking"
-  "commit habits" "developer report card" "代码分析" "摸鱼指数"
-  "研发效率" "开发者画像" "提交习惯" "工作习惯".
+  include "analyze repository" "profile developers" "commit habits"
+  "developer report card" "代码分析" "研发效率" "开发者画像"
+  "提交习惯" "工作习惯" "参与度".
 ---
 
 # Who Is Actor — Git 仓库开发者画像分析 Skill
 
 零依赖、零脚本，仅通过原生 `git` 命令采集数据，由 AI 深度解读，为每位开发者生成一份严肃、直接、毫不留情的体检报告。
 
+## 安全规范
+
+> **本 Skill 所有 shell 命令的参数都必须经过严格校验后才能执行，以防止命令注入攻击。**
+
+### 输入校验规则（执行任何 git 命令前必须完成）
+
+1. **`repo_path`（仓库路径）校验：**
+   - 必须是绝对路径（以 `/` 开头）
+   - 不得包含以下危险字符或子串：`;`、`|`、`&`、`$`、`` ` ``、`(`、`)`、`>`、`<`、`\n`、`\r`、`$()`、`..`
+   - 路径必须是一个真实存在的 Git 仓库（通过 `git -C <path> rev-parse --is-inside-work-tree` 验证，返回 `true` 才可继续）
+   - 如果校验失败，**立即终止并向用户报告错误，不得执行任何后续命令**
+
+2. **`author`（作者名）校验：**
+   - 仅允许包含：字母（a-z A-Z）、数字（0-9）、空格、连字符（`-`）、下划线（`_`）、点（`.`）、`@` 符号
+   - 正则白名单：`^[a-zA-Z0-9 _.@-]+$`
+   - 最大长度：128 字符
+   - 如果校验失败，跳过该作者并警告用户
+
+3. **`since` / `until`（日期参数）校验：**
+   - 必须匹配 ISO 日期格式：`^[0-9]{4}-[0-9]{2}-[0-9]{2}$`
+   - 如果校验失败，忽略该参数并警告用户
+
+4. **`branch`（分支名）校验：**
+   - 仅允许包含：字母、数字、`/`、`-`、`_`、`.`
+   - 正则白名单：`^[a-zA-Z0-9/_.-]+$`
+   - 不得包含 `..` 子串
+   - 如果校验失败，使用默认分支并警告用户
+
+### 隐私保护规则
+
+- **不采集开发者邮箱地址。** 所有 git 命令仅使用 `%an`（作者名）标识开发者，不使用 `%ae`（作者邮箱）。
+- **`git shortlog` 命令使用 `-sn` 而非 `-sne`**，以避免泄露邮箱。
+- 最终报告中不得出现任何邮箱地址。
+
 ## 使用场景
 
 - 当用户需要分析某个 Git 仓库中各开发者的真实行为画像时
 - 当用户想对比团队成员的提交习惯、工作节奏和代码质量时
-- 当用户好奇"谁在摸鱼"时
+- 当用户想了解团队的参与度分布时
 - 当用户需要对开发者给出优缺点评价和改进建议时
 
 ## 核心原则
 
 > **不安装任何依赖，不运行任何脚本。** 所有数据采集仅通过 `git log`、`git shortlog`、`git diff --stat` 等原生 git 命令完成，AI 负责解读和评估。
+
+> **安全第一。** 所有用户输入必须经过上述校验规则验证后，才能拼接到 shell 命令中。任何校验失败都必须终止或降级处理，绝不跳过校验直接执行。
 
 ## 工作流程
 
@@ -40,15 +76,19 @@ description: >
 | **时间范围** | 起止日期，ISO 格式 | 仓库全部历史 |
 | **分支** | 分析的目标分支 | 当前活跃分支 |
 
+> **⚠️ 在执行步骤 2 前，必须按照「安全规范」对所有参数进行校验。校验未通过的参数不得用于命令拼接。**
+
 ### 步骤 2: 数据采集（纯 git 命令）
 
 依次执行以下 git 命令来收集原始数据。**所有命令都在目标仓库目录下执行，不需要安装任何依赖。**
 
+> 以下示例中的 `<repo_path>`、`<author>` 等占位符，均指经过步骤 1 校验后的安全值。
+
 #### 2.1 贡献者概览
 
 ```bash
-# List all contributors with commit counts
-git -C <repo_path> shortlog -sne --all
+# List all contributors with commit counts (no email to protect privacy)
+git -C <repo_path> shortlog -sn --all
 ```
 
 #### 2.2 每位作者的提交详情
@@ -56,8 +96,8 @@ git -C <repo_path> shortlog -sne --all
 对每位需要分析的作者，执行以下命令（如指定了时间范围和分支，追加对应的 `--since`、`--until`、`<branch>` 参数）：
 
 ```bash
-# Detailed commit log: hash, author, date, message, file stats
-git -C <repo_path> log --author="<author>" --pretty=format:"%H|%an|%ae|%aI|%s" --numstat
+# Detailed commit log: hash, author name, date, message, file stats (no email)
+git -C <repo_path> log --author="<author>" --pretty=format:"%H|%an|%aI|%s" --numstat
 
 # Commit count per hour of day (for work habit analysis)
 git -C <repo_path> log --author="<author>" --pretty=format:"%aI" | cut -c12-13 | sort | uniq -c | sort -rn
@@ -195,9 +235,11 @@ git -C <repo_path> log --author="<author>" --pretty=format:"%ad" --date=short | 
 
 ---
 
-#### 🐟 维度六：摸鱼指数 (Slacking Index)
+#### 🐟 维度六：参与度指数 (Engagement Index)
 
-**计算方式（综合以下信号，0-100 分，越高越"摸鱼"）：**
+> 注：此指数旨在客观衡量代码仓库中的活跃参与程度，作为辅助参考。Git 记录仅反映代码提交活动，不代表开发者的全部工作（如设计、评审、沟通、指导等均不会被 Git 记录）。
+
+**计算方式（综合以下信号，0-100 分，越低代表 Git 上可见的参与度越高）：**
 
 | 信号 | 权重 | 说明 |
 |------|------|------|
@@ -208,11 +250,13 @@ git -C <repo_path> log --author="<author>" --pretty=format:"%ad" --date=short | 
 | 高流失率 + 高返工率 | 20% | 大量无效劳动 |
 
 **等级：**
-- 0-20：劳模，建议关注是否过劳
-- 21-40：踏实，稳定输出
-- 41-60：中等，有提升空间
-- 61-80：需关注，可能存在效率或动力问题
-- 81-100：重度摸鱼，建议深入了解原因
+- 0-20：高度活跃，建议关注是否过劳
+- 21-40：稳定参与，持续输出
+- 41-60：中等参与，有提升空间
+- 61-80：低参与度，建议了解是否有非代码贡献未被记录
+- 81-100：极低参与度，建议与当事人沟通了解全貌
+
+> **重要提示：** 此指数仅基于 Git 提交记录计算，无法反映代码评审、架构设计、技术讨论、团队指导等不产生提交记录的工作。高分不等于"偷懒"，低分也不等于"高效"。请在充分了解上下文后再做判断。
 
 ### 步骤 4: 生成报告
 
@@ -220,7 +264,7 @@ git -C <repo_path> log --author="<author>" --pretty=format:"%ad" --date=short | 
 
 #### 4.1 总览表
 
-| 开发者 | 提交数 | 增/删行数 | 日均提交 | 周末% | 深夜% | Bug Fix% | 流失率 | 摸鱼指数 | 综合评分 |
+| 开发者 | 提交数 | 增/删行数 | 日均提交 | 周末% | 深夜% | Bug Fix% | 流失率 | 参与度 | 综合评分 |
 |--------|--------|-----------|----------|-------|-------|----------|--------|---------|----------|
 | ... | ... | ... | ... | ... | ... | ... | ... | ... | ... |
 
@@ -232,7 +276,7 @@ git -C <repo_path> log --author="<author>" --pretty=format:"%ad" --date=short | 
 2. **AI 点评**：严肃、直接地指出优点和缺点（不要和稀泥）
 3. **改进建议**：针对缺点给出具体可执行的建议
 4. **六维雷达评分**：各维度 1-10 分
-5. **综合评分**：加权平均（提交习惯 15%、工作习惯 15%、研发效率 25%、代码风格 15%、代码质量 20%、摸鱼指数反向 10%）
+5. **综合评分**：加权平均（提交习惯 15%、工作习惯 15%、研发效率 25%、代码风格 15%、代码质量 20%、参与度指数反向 10%）
 6. **一句话总结**：用一句犀利的话概括此人
 
 #### 4.3 团队横向对比
@@ -252,7 +296,9 @@ git -C <repo_path> log --author="<author>" --pretty=format:"%ad" --date=short | 
 ## 注意事项
 
 - 所有数据采集仅使用原生 `git` 命令，**不安装任何 pip 包，不运行任何 Python/Node 脚本**
+- **所有用户输入必须经过「安全规范」中的校验规则验证后才能执行**，防止命令注入攻击
+- **不采集开发者邮箱**，保护个人隐私
 - 分析大型仓库时，可适当限定时间范围以控制命令执行时间
-- 作者名称匹配时注意同一人可能有不同的 name/email 组合
+- 作者名称匹配时注意同一人可能有不同的 name 组合（可通过 `.mailmap` 统一）
 - 时区差异可能影响工作时段判断，应以提交记录中的时区为准
-- 摸鱼指数仅供参考和娱乐，不应作为绩效考核的唯一依据
+- 参与度指数仅基于 Git 提交数据，**不反映非代码贡献**（设计、评审、指导等），不应作为绩效考核的唯一依据
