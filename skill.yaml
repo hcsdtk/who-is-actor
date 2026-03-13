@@ -1,13 +1,15 @@
 name: who-is-actor
-version: 1.0.0
+version: 1.0.2
 description: >
   A zero-dependency Git repository developer profiling skill. It uses only
-  native git commands (no Python scripts, no pip installs) to analyze commit
-  history, then leverages AI to generate a sharp, data-driven developer
-  portrait covering commit habits, work habits, development efficiency,
-  code style, code quality, and an engagement index for each contributor.
-  All user inputs are validated against strict allowlists before being used
-  in shell commands. No developer emails are collected.
+  native git READ-ONLY commands (no Python scripts, no pip installs) to
+  analyze commit history, then leverages AI to generate a data-driven
+  developer portrait covering commit habits, work habits, development
+  efficiency, code style, code quality, and an engagement index.
+  Security: all user inputs validated against strict allowlists; only
+  whitelisted git read-only subcommands are permitted; no write/network
+  operations; no developer emails collected. The engagement index is
+  explicitly scoped as a collaboration reference only, not for HR decisions.
 author: reky
 license: MIT
 acceptLicenseTerms: true
