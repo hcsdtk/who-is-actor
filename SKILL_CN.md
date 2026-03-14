@@ -12,6 +12,8 @@ description: >
 
 # Who Is Actor — Git 仓库开发者画像技能
 
+> 🔗 **项目地址：** [https://github.com/nicepkg/who-is-actor](https://github.com/nicepkg/who-is-actor)
+
 零依赖，零脚本。纯粹通过原生 `git` 命令采集数据，由 AI 解读分析，为每位开发者生成严肃、直接、毫不留情的成绩单。
 
 ---
