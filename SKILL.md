@@ -18,23 +18,84 @@ Zero dependencies, zero scripts. Collects data purely through native `git` comma
 
 ---
 
-## Quick Start
+## 💬 Natural Language (Recommended)
 
-**Just say one of these to your AI agent:**
+You don't need to memorize any commands or parameters — simply describe what you need in any language:
 
-```
-Analyze the repository at /path/to/my-project
-```
+### English
 
 ```
-Profile developers in /path/to/my-project since 2024-01-01
+💬 "Analyze the repository at /path/to/my-project"
+💬 "Profile all developers in this repo"
+💬 "Who are the most active contributors in /path/to/my-project?"
+💬 "Compare commit habits of Alice and Bob"
+💬 "Show me the code quality report for this project since 2024-01-01"
+💬 "What does each developer's work pattern look like on branch main?"
+💬 "Give me an honest review of every contributor's strengths and weaknesses"
+💬 "Is there a bus-factor risk in /path/to/my-project?"
 ```
 
+### 中文
+
 ```
-Compare commit habits of Alice and Bob in /path/to/my-project on branch main
+💬 "分析一下 /path/to/my-project 这个仓库"
+💬 "帮我看看这个项目里每个开发者的提交习惯"
+💬 "对比一下 Alice 和 Bob 的研发效率"
+💬 "生成这个仓库的开发者画像报告"
+💬 "这个项目的代码质量怎么样？"
+💬 "从 2024 年 1 月开始，分析 main 分支的提交记录"
+💬 "团队里谁的代码风格最好？谁需要改进？"
+💬 "看看这个仓库有没有巴士因子风险"
 ```
 
-**Parameters at a glance:**
+### 日本語
+
+```
+💬 "このリポジトリの開発者を分析してください /path/to/my-project"
+💬 "各開発者のコミット習慣を比較してください"
+💬 "このプロジェクトのコード品質レポートを作成してください"
+💬 "チームの開発効率を評価してください"
+```
+
+### 한국어
+
+```
+💬 "이 저장소의 개발자 프로필을 분석해 주세요 /path/to/my-project"
+💬 "각 개발자의 커밋 습관을 비교해 주세요"
+💬 "이 프로젝트의 코드 품질 보고서를 만들어 주세요"
+💬 "팀의 개발 효율성을 평가해 주세요"
+```
+
+### Español
+
+```
+💬 "Analiza el repositorio en /path/to/my-project"
+💬 "Compara los hábitos de commit de todos los desarrolladores"
+💬 "Dame un informe de calidad del código de este proyecto"
+💬 "¿Quién es el desarrollador más activo del equipo?"
+```
+
+### Français
+
+```
+💬 "Analyse le dépôt situé à /path/to/my-project"
+💬 "Compare les habitudes de commit de chaque développeur"
+💬 "Génère un rapport de qualité du code pour ce projet"
+💬 "Qui est le contributeur le plus actif de l'équipe ?"
+```
+
+### Deutsch
+
+```
+💬 "Analysiere das Repository unter /path/to/my-project"
+💬 "Vergleiche die Commit-Gewohnheiten aller Entwickler"
+💬 "Erstelle einen Code-Qualitätsbericht für dieses Projekt"
+💬 "Wer ist der aktivste Entwickler im Team?"
+```
+
+---
+
+## ⚙️ Parameters
 
 | Parameter | Description | Required | Default |
 |-----------|-------------|----------|---------|
