@@ -12,111 +12,142 @@ description: >
   "提交习惯" "工作习惯" "参与度".
 ---
 
-# Who Is Actor — Git 仓库开发者画像分析 Skill
+# Who Is Actor — Git Repository Developer Profiling Skill
 
-零依赖、零脚本，仅通过原生 `git` 命令采集数据，由 AI 深度解读，为每位开发者生成一份严肃、直接、毫不留情的体检报告。
+Zero dependencies, zero scripts. Collects data purely through native `git` commands, interpreted by AI, to generate a serious, direct, and unsparing report card for every developer.
 
-## 安全规范
+---
 
-> **本 Skill 所有 shell 命令的参数都必须经过严格校验后才能执行，以防止命令注入攻击。**
+## Quick Start
 
-### 命令白名单（仅允许执行以下命令）
+**Just say one of these to your AI agent:**
 
-本 Skill **只允许执行以下预定义的 git 只读子命令**，不得执行任何其他 shell 命令：
+```
+Analyze the repository at /path/to/my-project
+```
 
-| 允许的命令 | 用途 | 是否修改仓库 |
-|-----------|------|-------------|
-| `git -C <path> rev-parse --is-inside-work-tree` | 验证路径是否为合法 Git 仓库 | ❌ 只读 |
-| `git -C <path> shortlog -sn --all` | 获取贡献者列表和提交数 | ❌ 只读 |
-| `git -C <path> log ...` | 获取提交历史详情 | ❌ 只读 |
-| `git -C <path> diff --stat ...` | 获取变更统计 | ❌ 只读 |
+```
+Profile developers in /path/to/my-project since 2024-01-01
+```
 
-**严格禁止的命令类型：**
-- ❌ 任何写入操作：`git push`、`git commit`、`git merge`、`git rebase`、`git reset`、`git checkout`、`git branch -d`
-- ❌ 任何非 git 命令：`curl`、`wget`、`python`、`node`、`bash -c`、`sh`、`eval`、`rm`、`cp`、`mv`
-- ❌ 任何文件写入或重定向：`>`、`>>`、`tee`（管道 `|` 仅允许连接 `cut`、`sort`、`uniq`、`awk`、`grep`、`wc`、`sed`、`head` 这些只读文本处理工具）
-- ❌ 任何网络操作：`git fetch`、`git pull`、`git clone`、`git remote`
+```
+Compare commit habits of Alice and Bob in /path/to/my-project on branch main
+```
 
-> **如果 AI agent 尝试执行白名单之外的命令，用户应立即拒绝执行。**
+**Parameters at a glance:**
 
-### 输入校验规则（执行任何 git 命令前必须完成）
+| Parameter | Description | Required | Default |
+|-----------|-------------|----------|---------|
+| `repo_path` | Absolute path to the target Git repository | ✅ Yes | — |
+| `authors` | Comma-separated display names (emails NOT accepted) | No | All contributors |
+| `since` | Start date in ISO format (`YYYY-MM-DD`) | No | Full history |
+| `until` | End date in ISO format (`YYYY-MM-DD`) | No | Full history |
+| `branch` | Target branch to analyze | No | Active branch |
 
-1. **`repo_path`（仓库路径）校验：**
-   - 必须是绝对路径（以 `/` 开头）
-   - 不得包含以下危险字符或子串：`;`、`|`、`&`、`$`、`` ` ``、`(`、`)`、`>`、`<`、`\n`、`\r`、`$()`、`..`
-   - 路径必须是一个真实存在的 Git 仓库（通过 `git -C <path> rev-parse --is-inside-work-tree` 验证，返回 `true` 才可继续）
-   - 如果校验失败，**立即终止并向用户报告错误，不得执行任何后续命令**
+**What you get:** A structured Markdown report with a summary table, per-developer profiles (six-dimension radar scores, strengths/weaknesses, improvement suggestions), team comparison, and bus-factor risk alerts.
 
+---
 
-2. **`author`（作者名）校验：**
-   - 仅允许包含：字母（a-z A-Z）、数字（0-9）、空格、连字符（`-`）、下划线（`_`）、点（`.`）
-   - **不允许包含 `@` 符号**（禁止传入邮箱格式，以确保与隐私保护规则一致）
-   - 正则白名单：`^[a-zA-Z0-9 _.-]+$`
-   - 最大长度：128 字符
-   - 如果输入包含 `@`，提示用户改为使用作者显示名（display name），然后跳过该作者
+## Security Specification
 
-3. **`since` / `until`（日期参数）校验：**
-   - 必须匹配 ISO 日期格式：`^[0-9]{4}-[0-9]{2}-[0-9]{2}$`
-   - 如果校验失败，忽略该参数并警告用户
+> **All shell command parameters MUST be strictly validated before execution to prevent command injection attacks.**
 
-4. **`branch`（分支名）校验：**
-   - 仅允许包含：字母、数字、`/`、`-`、`_`、`.`
-   - 正则白名单：`^[a-zA-Z0-9/_.-]+$`
-   - 不得包含 `..` 子串
-   - 如果校验失败，使用默认分支并警告用户
+### Command Whitelist (Only These Commands Are Allowed)
 
-### 隐私保护规则
+This skill **only permits the following predefined read-only git subcommands**. No other shell commands may be executed:
 
-- **不采集开发者邮箱地址。** 所有 git 命令仅使用 `%an`（作者名）标识开发者，不使用 `%ae`（作者邮箱）。
-- **`git shortlog` 命令使用 `-sn` 而非 `-sne`**，以避免泄露邮箱。
-- **`authors` 参数仅接受作者显示名（display name），不接受邮箱地址。** 输入校验会拒绝包含 `@` 的值。
-- 注意：`git --author` 参数会同时匹配 name 和 email 字段。由于本 Skill 禁止传入邮箱格式的值，因此 `--author` 只会通过 name 部分进行匹配，不会利用 email 字段。
-- 最终报告中不得出现任何邮箱地址。
+| Allowed Command | Purpose | Modifies Repo? |
+|----------------|---------|----------------|
+| `git -C <path> rev-parse --is-inside-work-tree` | Verify the path is a valid Git repository | ❌ Read-only |
+| `git -C <path> shortlog -sn --all` | Get contributor list and commit counts | ❌ Read-only |
+| `git -C <path> log ...` | Get commit history details | ❌ Read-only |
+| `git -C <path> diff --stat ...` | Get change statistics | ❌ Read-only |
 
-## 使用场景
+**Strictly Prohibited Command Types:**
+- ❌ Any write operations: `git push`, `git commit`, `git merge`, `git rebase`, `git reset`, `git checkout`, `git branch -d`
+- ❌ Any non-git commands: `curl`, `wget`, `python`, `node`, `bash -c`, `sh`, `eval`, `rm`, `cp`, `mv`
+- ❌ Any file writes or redirections: `>`, `>>`, `tee` (pipe `|` is only allowed to connect read-only text-processing tools: `cut`, `sort`, `uniq`, `awk`, `grep`, `wc`, `sed`, `head`)
+- ❌ Any network operations: `git fetch`, `git pull`, `git clone`, `git remote`
 
-- 当用户需要分析某个 Git 仓库中各开发者的真实行为画像时
-- 当用户想对比团队成员的提交习惯、工作节奏和代码质量时
-- 当用户想了解团队的参与度分布时
-- 当用户需要对开发者给出优缺点评价和改进建议时
+> **If the AI agent attempts to execute a command outside the whitelist, the user should immediately reject execution.**
 
-## 核心原则
+### Input Validation Rules (Must Be Completed Before Any Git Command)
 
-> **不安装任何依赖，不运行任何脚本。** 所有数据采集仅通过 `git log`、`git shortlog`、`git diff --stat` 等原生 git 命令完成，AI 负责解读和评估。
+1. **`repo_path` (Repository Path) Validation:**
+   - Must be an absolute path (starting with `/`)
+   - Must NOT contain any of these dangerous characters or substrings: `;`, `|`, `&`, `$`, `` ` ``, `(`, `)`, `>`, `<`, `\n`, `\r`, `$()`, `..`
+   - Path must be a real, existing Git repository (verified via `git -C <path> rev-parse --is-inside-work-tree` returning `true`)
+   - If validation fails, **immediately abort and report the error to the user — no subsequent commands may be executed**
 
-> **安全第一。** 所有用户输入必须经过上述校验规则验证后，才能拼接到 shell 命令中。任何校验失败都必须终止或降级处理，绝不跳过校验直接执行。
+2. **`author` (Author Name) Validation:**
+   - Only allowed characters: letters (a-z A-Z), digits (0-9), spaces, hyphens (`-`), underscores (`_`), dots (`.`)
+   - **The `@` symbol is NOT allowed** (email format is prohibited to align with privacy protection rules)
+   - Regex whitelist: `^[a-zA-Z0-9 _.-]+$`
+   - Maximum length: 128 characters
+   - If input contains `@`, prompt the user to use the author's display name instead, then skip that author
 
-## 工作流程
+3. **`since` / `until` (Date Parameters) Validation:**
+   - Must match ISO date format: `^[0-9]{4}-[0-9]{2}-[0-9]{2}$`
+   - If validation fails, ignore the parameter and warn the user
 
-### 步骤 1: 确认分析参数
+4. **`branch` (Branch Name) Validation:**
+   - Only allowed characters: letters, digits, `/`, `-`, `_`, `.`
+   - Regex whitelist: `^[a-zA-Z0-9/_.-]+$`
+   - Must NOT contain the `..` substring
+   - If validation fails, use the default branch and warn the user
 
-向用户确认以下信息（如用户未指定则使用默认值）：
+### Privacy Protection Rules
 
-| 参数 | 说明 | 默认值 |
-|------|------|--------|
-| **仓库路径** | 目标 Git 仓库的绝对路径 | （必填） |
-| **目标作者** | 指定分析某些开发者，留空则分析全部 | 全部贡献者 |
-| **时间范围** | 起止日期，ISO 格式 | 仓库全部历史 |
-| **分支** | 分析的目标分支 | 当前活跃分支 |
+- **Developer email addresses are NOT collected.** All git commands use only `%an` (author name) to identify developers, never `%ae` (author email).
+- **`git shortlog` uses `-sn` instead of `-sne`** to avoid leaking email addresses.
+- **The `authors` parameter only accepts display names, NOT email addresses.** Input validation rejects values containing `@`.
+- Note: The `git --author` parameter matches against both name and email fields. Since this skill prohibits email-format values, `--author` will only match via the name portion and will not utilize the email field.
+- The final report MUST NOT contain any email addresses.
 
-> **⚠️ 在执行步骤 2 前，必须按照「安全规范」对所有参数进行校验。校验未通过的参数不得用于命令拼接。**
+## Use Cases
 
-### 步骤 2: 数据采集（纯 git 命令）
+- When users need to analyze each developer's real behavioral profile in a Git repository
+- When users want to compare team members' commit habits, work rhythms, and code quality
+- When users want to understand the team's engagement distribution
+- When users need honest evaluations of each developer's strengths and weaknesses with improvement suggestions
 
-依次执行以下 git 命令来收集原始数据。**所有命令都在目标仓库目录下执行，不需要安装任何依赖。**
+## Core Principles
 
-> 以下示例中的 `<repo_path>`、`<author>` 等占位符，均指经过步骤 1 校验后的安全值。
+> **Install nothing, run no scripts.** All data collection is done exclusively through native git commands (`git log`, `git shortlog`, `git diff --stat`, etc.). The AI is responsible for interpretation and evaluation.
 
-#### 2.1 贡献者概览
+> **Security first.** All user inputs must pass the validation rules above before being incorporated into shell commands. Any validation failure must result in termination or graceful degradation — never skip validation.
+
+## Workflow
+
+### Step 1: Confirm Analysis Parameters
+
+Confirm the following with the user (use defaults if not specified):
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| **Repository Path** | Absolute path to the target Git repository | (Required) |
+| **Target Authors** | Specific developers to analyze; leave blank for all | All contributors |
+| **Date Range** | Start/end dates in ISO format | Full repository history |
+| **Branch** | Target branch for analysis | Current active branch |
+
+> **⚠️ Before executing Step 2, ALL parameters MUST be validated according to the "Security Specification" above. Parameters that fail validation MUST NOT be used in command construction.**
+
+### Step 2: Data Collection (Pure Git Commands)
+
+Execute the following git commands in sequence to collect raw data. **All commands run against the target repository directory — no dependencies need to be installed.**
+
+> In the examples below, `<repo_path>`, `<author>`, etc. are placeholders for validated safe values from Step 1.
+
+#### 2.1 Contributor Overview
 
 ```bash
 # List all contributors with commit counts (no email to protect privacy)
 git -C <repo_path> shortlog -sn --all
 ```
 
-#### 2.2 每位作者的提交详情
+#### 2.2 Per-Author Commit Details
 
-对每位需要分析的作者，执行以下命令（如指定了时间范围和分支，追加对应的 `--since`、`--until`、`<branch>` 参数）：
+For each author to be analyzed, execute the following commands (append `--since`, `--until`, `<branch>` parameters if a date range or branch was specified):
 
 ```bash
 # Detailed commit log: hash, author name, date, message, file stats (no email)
@@ -125,7 +156,7 @@ git -C <repo_path> log --author="<author>" --pretty=format:"%H|%an|%aI|%s" --num
 # Commit count per hour of day (for work habit analysis)
 git -C <repo_path> log --author="<author>" --pretty=format:"%aI" | cut -c12-13 | sort | uniq -c | sort -rn
 
-# Commit count per day of week (0=Sun, 6=Sat)
+# Commit count per day of week (1=Mon, 7=Sun)
 git -C <repo_path> log --author="<author>" --pretty=format:"%ad" --date=format:"%u" | sort | uniq -c | sort -rn
 
 # Lines added/deleted summary
@@ -144,7 +175,7 @@ git -C <repo_path> log --author="<author>" --pretty=format:"%ad" --date=short | 
 git -C <repo_path> log --author="<author>" --pretty=format:"%ad %s" --date=short --name-only | head -200
 ```
 
-#### 2.3 代码质量信号
+#### 2.3 Code Quality Signals
 
 ```bash
 # Bug fix commits (messages containing fix/bug/hotfix/patch)
@@ -163,7 +194,7 @@ git -C <repo_path> log --author="<author>" --merges --oneline | wc -l
 git -C <repo_path> log --author="<author>" --pretty=format:"%s" | grep -cE "^(feat|fix|chore|docs|style|refactor|test|perf|ci|build)(\(.+\))?:"
 ```
 
-#### 2.4 团队级数据
+#### 2.4 Team-Level Data
 
 ```bash
 # Files with only one contributor (bus factor risk)
@@ -173,166 +204,166 @@ git -C <repo_path> log --pretty=format:"%an" --name-only | sort | uniq -c | sort
 git -C <repo_path> log --author="<author>" --pretty=format:"%ad" --date=short | sort | sed -n '1p;$p'
 ```
 
-### 步骤 3: AI 分析与评估
+### Step 3: AI Analysis & Evaluation
 
-基于采集到的原始数据，从以下 **六个维度** 逐一分析每位开发者，并给出 1-10 分的评分：
-
----
-
-#### 📝 维度一：提交习惯 (Commit Habits)
-
-**分析要素：**
-- 总提交次数、日均提交频率
-- 每次提交的平均修改行数（增+删）
-- Commit message 平均长度和质量
-- Merge 提交占比
-- 单次大提交（>500 行）的频率
-
-**评分标准：**
-- 10 分：日均 2-5 次提交，每次 50-200 行，message 清晰规范
-- 5 分：频率不稳定，偶有巨型提交，message 质量参差
-- 1 分：极少提交或大量一行 message 的巨型提交
+Based on the collected raw data, analyze each developer across the following **six dimensions**, assigning a score of 1–10 for each:
 
 ---
 
-#### ⏰ 维度二：工作习惯 (Work Habits)
+#### 📝 Dimension 1: Commit Habits
 
-**分析要素：**
-- 提交时段分布（哪个小时最活跃）
-- 周末提交占比
-- 深夜编码比例（22:00-04:59）
-- 最长连续编码天数
-- 活跃天数 / 总跨度天数
+**Analysis Factors:**
+- Total commit count, average daily commit frequency
+- Average lines changed per commit (additions + deletions)
+- Average commit message length and quality
+- Merge commit ratio
+- Frequency of large commits (>500 lines)
 
-**评分标准：**
-- 10 分：工作时间规律，深夜/周末比例 <10%，持续稳定输出
-- 5 分：有一定深夜/周末提交，节奏波动
-- 1 分：几乎全在深夜/周末，或极度不规律
-
-> 注：深夜/周末编码本身不是"坏事"，但长期如此可能反映流程或资源问题。
+**Scoring Criteria:**
+- 10: 2–5 daily commits, 50–200 lines each, clear and well-formatted messages
+- 5: Inconsistent frequency, occasional giant commits, mixed message quality
+- 1: Very few commits or frequent giant commits with one-word messages
 
 ---
 
-#### 🚀 维度三：研发效率 (Development Efficiency)
+#### ⏰ Dimension 2: Work Habits
 
-**分析要素：**
-- 代码净增长率：(新增 - 删除) / 新增
-- 代码流失率 (Churn Rate)：删除行 / 新增行
-- 返工率 (Rework Ratio)：7 天内重复修改同一文件的频率
-- 活跃天数内的日均产出
+**Analysis Factors:**
+- Commit time distribution (peak hours)
+- Weekend commit percentage
+- Late-night coding ratio (22:00–04:59)
+- Longest consecutive coding streak (days)
+- Active days / total span days
 
-**评分标准：**
-- 10 分：净增长率高，流失率 <20%，返工率低，产出稳定
-- 5 分：中等流失率，有一定返工
-- 1 分：大量代码被删除，频繁返工，产出波动大
+**Scoring Criteria:**
+- 10: Regular working hours, late-night/weekend ratio <10%, consistent and steady output
+- 5: Some late-night/weekend commits, moderate rhythm fluctuations
+- 1: Almost all commits at night/weekends, or extremely irregular patterns
 
----
-
-#### 🎨 维度四：代码风格 (Code Style)
-
-**分析要素：**
-- 主要使用的编程语言/文件类型分布
-- Conventional Commits 规范遵循率
-- Commit message 是否关联 Issue 编号
-- 文件修改的集中度（是专注于少数模块还是广撒网）
-
-**评分标准：**
-- 10 分：>80% 遵循 Conventional Commits，message 关联 Issue，修改聚焦
-- 5 分：部分遵循规范，偶尔散乱
-- 1 分：几乎不遵循规范，message 无意义
+> Note: Late-night/weekend coding is not inherently "bad," but persistent patterns may indicate process or resource issues.
 
 ---
 
-#### 🔍 维度五：代码质量 (Code Quality)
+#### 🚀 Dimension 3: Development Efficiency
 
-**分析要素：**
-- Bug Fix 提交占比
-- Revert 提交频率
-- 大提交（>500 行）占比
-- 测试相关文件的修改频率
+**Analysis Factors:**
+- Net code growth rate: (additions - deletions) / additions
+- Code churn rate: deletions / additions
+- Rework ratio: frequency of modifying the same file within 7-day windows
+- Average daily output during active days
 
-**评分标准：**
-- 10 分：Bug Fix 占比 <10%，无 Revert，大提交 <5%，有测试改动
-- 5 分：Bug Fix 15-25%，少量 Revert，有些大提交
-- 1 分：Bug Fix >30%，频繁 Revert，大量巨型提交
+**Scoring Criteria:**
+- 10: High net growth rate, churn rate <20%, low rework ratio, stable output
+- 5: Moderate churn rate, some rework
+- 1: Massive code deletions, frequent rework, highly volatile output
 
 ---
 
-#### 📊 维度六：参与度指数 (Engagement Index)
+#### 🎨 Dimension 4: Code Style
 
-> **⚠️ 用途限制声明：** 此指数仅用于团队协作模式的宏观参考，**严禁将其作为个人绩效考核、裁员决策、薪酬调整等人事决定的依据。** 使用者应理解此指数的局限性并承担相应的伦理责任。
+**Analysis Factors:**
+- Primary programming languages / file type distribution
+- Conventional Commits compliance rate
+- Whether commit messages reference issue numbers
+- File modification focus (concentrated on a few modules vs. scattered)
 
-> 注：此指数旨在客观衡量代码仓库中的活跃参与程度，作为辅助参考。Git 记录仅反映代码提交活动，不代表开发者的全部工作（如设计、评审、沟通、指导等均不会被 Git 记录）。
+**Scoring Criteria:**
+- 10: >80% Conventional Commits compliance, messages reference issues, focused modifications
+- 5: Partial compliance, occasionally scattered
+- 1: Almost no compliance, meaningless messages
 
-**计算方式（综合以下信号，0-100 分，越低代表 Git 上可见的参与度越高）：**
+---
 
-| 信号 | 权重 | 说明 |
-|------|------|------|
-| 日均提交极低（<0.3） | 25% | 活跃天数内产出过低 |
-| 活跃天数占比低（<30%） | 20% | 时间跨度大但实际干活的天数少 |
-| 代码净增长极低或为负 | 20% | 写的还没删的多 |
-| Commit message 敷衍（平均 <15 字符） | 15% | 不认真对待提交记录 |
-| 高流失率 + 高返工率 | 20% | 大量无效劳动 |
+#### 🔍 Dimension 5: Code Quality
 
-**等级：**
-- 0-20：高度活跃，建议关注是否过劳
-- 21-40：稳定参与，持续输出
-- 41-60：中等参与，有提升空间
-- 61-80：低参与度，建议了解是否有非代码贡献未被记录
-- 81-100：极低参与度，建议与当事人沟通了解全貌
+**Analysis Factors:**
+- Bug fix commit ratio
+- Revert commit frequency
+- Large commit (>500 lines) ratio
+- Frequency of test-related file modifications
 
-> **重要提示：** 此指数仅基于 Git 提交记录计算，无法反映代码评审、架构设计、技术讨论、团队指导等不产生提交记录的工作。高分不等于"偷懒"，低分也不等于"高效"。请在充分了解上下文后再做判断。
+**Scoring Criteria:**
+- 10: Bug fix ratio <10%, no reverts, large commits <5%, test files modified
+- 5: Bug fix 15–25%, few reverts, some large commits
+- 1: Bug fix >30%, frequent reverts, many giant commits
 
-### 步骤 4: 生成报告
+---
 
-最终报告必须包含以下结构：
+#### 📊 Dimension 6: Engagement Index
 
-#### 4.1 总览表
+> **⚠️ Usage Restriction:** This index is intended solely as a macro-level reference for team collaboration patterns. **It is strictly prohibited to use it as a basis for individual performance reviews, layoff decisions, compensation adjustments, or any other HR decisions.** Users should understand the limitations of this index and bear corresponding ethical responsibility.
 
-| 开发者 | 提交数 | 增/删行数 | 日均提交 | 周末% | 深夜% | Bug Fix% | 流失率 | 参与度 | 综合评分 |
-|--------|--------|-----------|----------|-------|-------|----------|--------|---------|----------|
+> Note: This index aims to objectively measure visible participation levels in the code repository as a supplementary reference. Git records only reflect code commit activity and do not represent a developer's full body of work (design, code review, communication, mentoring, etc. are not captured by Git).
+
+**Calculation Method (composite of the following signals, 0–100 scale, lower = higher visible engagement):**
+
+| Signal | Weight | Description |
+|--------|--------|-------------|
+| Very low daily commits (<0.3) | 25% | Output during active days is too low |
+| Low active-day ratio (<30%) | 20% | Large time span but few actual working days |
+| Very low or negative net code growth | 20% | More code deleted than written |
+| Careless commit messages (avg <15 chars) | 15% | Not taking commit records seriously |
+| High churn rate + high rework rate | 20% | Large amount of wasted effort |
+
+**Levels:**
+- 0–20: Highly active — consider whether burnout risk exists
+- 21–40: Steady participation, consistent output
+- 41–60: Moderate participation, room for improvement
+- 61–80: Low participation — check if there are non-code contributions not captured
+- 81–100: Very low participation — recommend discussing with the individual to understand the full picture
+
+> **Important:** This index is calculated solely from Git commit records and cannot reflect code reviews, architecture design, technical discussions, team mentoring, or other work that doesn't produce commits. A high score does NOT equal "slacking," and a low score does NOT equal "efficient." Please make judgments only after understanding the full context.
+
+### Step 4: Generate Report
+
+The final report MUST include the following structure:
+
+#### 4.1 Summary Table
+
+| Developer | Commits | Lines +/- | Daily Avg | Weekend% | Late-Night% | Bug Fix% | Churn Rate | Engagement | Overall Score |
+|-----------|---------|-----------|-----------|----------|-------------|----------|------------|------------|---------------|
 | ... | ... | ... | ... | ... | ... | ... | ... | ... | ... |
 
-#### 4.2 每位开发者的详细画像
+#### 4.2 Individual Developer Profiles
 
-对每位开发者输出：
+For each developer, output:
 
-1. **数据仪表盘**：六维度关键指标数值
-2. **AI 点评**：严肃、直接地指出优点和缺点（不要和稀泥）
-3. **改进建议**：针对缺点给出具体可执行的建议
-4. **六维雷达评分**：各维度 1-10 分
-5. **综合评分**：加权平均（提交习惯 15%、工作习惯 15%、研发效率 25%、代码风格 15%、代码质量 20%、参与度指数反向 10%）
-6. **一句话总结**：用一句犀利的话概括此人
+1. **Data Dashboard**: Key metrics for all six dimensions
+2. **AI Commentary**: Serious, direct assessment of strengths and weaknesses (no sugarcoating)
+3. **Improvement Suggestions**: Specific, actionable recommendations for each weakness
+4. **Six-Dimension Radar Score**: 1–10 per dimension
+5. **Overall Score**: Weighted average (Commit Habits 15%, Work Habits 15%, Dev Efficiency 25%, Code Style 15%, Code Quality 20%, Engagement Index inverse 10%)
+6. **One-Line Summary**: A sharp, memorable sentence summarizing this developer
 
-#### 4.3 团队横向对比
+#### 4.3 Team Cross-Comparison
 
-- 各维度的排名
-- 最佳/最差开发者高亮
-- 团队整体健康度评估
-- Bus Factor 风险提示
+- Rankings across all dimensions
+- Highlight best / worst performers
+- Overall team health assessment
+- Bus factor risk alerts
 
-## 点评风格要求
+## Commentary Style Requirements
 
-- **严肃直接**：不粉饰、不和稀泥。数据说话，好就是好，差就是差。
-- **有温度**：指出问题的同时给出改进路径，对事不对人。
-- **犀利但公正**：像一个资深 Tech Lead 在做年度 Code Review，既不留情面也不刻薄。
-- **数据驱动**：每个结论必须有对应的数据支撑，不凭感觉。
+- **Serious and direct**: No sugarcoating, no hedging. Let the data speak — good is good, bad is bad.
+- **Warm but firm**: Point out problems while providing a path to improvement. Critique the work, not the person.
+- **Sharp but fair**: Like a senior Tech Lead conducting an annual Code Review — neither pulling punches nor being cruel.
+- **Data-driven**: Every conclusion MUST be backed by corresponding data. No gut feelings.
 
-## 注意事项
+## Important Notes
 
-- 所有数据采集仅使用原生 `git` 命令，**不安装任何 pip 包，不运行任何 Python/Node 脚本**
-- **所有用户输入必须经过「安全规范」中的校验规则验证后才能执行**，防止命令注入攻击
-- **不采集开发者邮箱**，保护个人隐私
-- 分析大型仓库时，可适当限定时间范围以控制命令执行时间
-- 作者名称匹配时注意同一人可能有不同的 name 组合（可通过 `.mailmap` 统一）
-- 时区差异可能影响工作时段判断，应以提交记录中的时区为准
-- 参与度指数仅基于 Git 提交数据，**不反映非代码贡献**（设计、评审、指导等），不应作为绩效考核的唯一依据
+- All data collection uses only native `git` commands — **no pip packages, no Python/Node scripts installed or executed**
+- **All user inputs MUST be validated per the "Security Specification" rules before execution** to prevent command injection attacks
+- **Developer emails are NOT collected** to protect personal privacy
+- For large repositories, consider limiting the date range to control command execution time
+- Be aware that the same person may have different name variants (can be unified via `.mailmap`)
+- Timezone differences may affect work-hour analysis — use the timezone from the commit records
+- The Engagement Index is based solely on Git commit data and **does NOT reflect non-code contributions** (design, reviews, mentoring, etc.) — it should not be the sole basis for performance evaluation
 
-## 伦理使用条款
+## Ethical Use Policy
 
-本 Skill 生成的分析报告应遵循以下原则：
+Reports generated by this skill should adhere to the following principles:
 
-1. **辅助参考，非决策依据**：报告仅供团队内部参考，帮助理解协作模式和改进方向，**严禁直接用于绩效考核、裁员决策、薪酬调整等人事决定。**
-2. **公开透明**：如果在团队中使用此工具，建议提前告知所有被分析的团队成员。
-3. **完整上下文**：任何对报告的引用都应附带完整的局限性说明，避免断章取义。
-4. **对事不对人**：分析目标是改进团队协作流程和个人工作方式，而非评判人的价值。
+1. **Supplementary reference, NOT a decision-making basis**: Reports are for internal team reference only, to help understand collaboration patterns and areas for improvement. **They are strictly prohibited from being used directly for performance reviews, layoff decisions, compensation adjustments, or other HR decisions.**
+2. **Transparency**: If using this tool within a team, it is recommended to inform all analyzed team members in advance.
+3. **Full context**: Any citation of the report should include complete limitation disclaimers to avoid being taken out of context.
+4. **Critique the work, not the person**: The goal is to improve team collaboration processes and individual work methods, not to judge a person's worth.

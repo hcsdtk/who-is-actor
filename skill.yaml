@@ -1,5 +1,5 @@
 name: who-is-actor
-version: 1.0.3
+version: 1.0.5
 description: >
   A zero-dependency Git repository developer profiling skill. It uses only
   native git READ-ONLY commands (no Python scripts, no pip installs) to
@@ -10,6 +10,9 @@ description: >
   whitelisted git read-only subcommands are permitted; no write/network
   operations; no developer emails collected. The engagement index is
   explicitly scoped as a collaboration reference only, not for HR decisions.
+  Note: "zero-dependency" means no Python/Node packages or custom scripts
+  are installed — the skill does require standard system binaries (git and
+  common Unix text-processing utilities) to be present on the host.
 author: reky
 license: MIT
 acceptLicenseTerms: true
@@ -20,6 +23,26 @@ tags:
   - zero-dependency
   - commit-patterns
   - engagement-index
+
+required_binaries:
+  - name: git
+    reason: Core dependency — all data collection uses native git read-only subcommands.
+  - name: cut
+    reason: Text processing — extracts fields from git output (e.g., hour from ISO timestamps).
+  - name: sort
+    reason: Text processing — sorts lines for frequency analysis.
+  - name: uniq
+    reason: Text processing — deduplicates sorted lines and counts occurrences.
+  - name: awk
+    reason: Text processing — aggregates numeric fields (lines added/deleted) and computes lengths.
+  - name: grep
+    reason: Text processing — filters lines by pattern (e.g., file extensions, bug-fix keywords).
+  - name: sed
+    reason: Text processing — extracts first/last lines for date range detection.
+  - name: wc
+    reason: Text processing — counts matching lines (e.g., number of bug-fix commits).
+  - name: head
+    reason: Text processing — limits output to top-N results.
 
 runtime: ai
 entry: SKILL.md
