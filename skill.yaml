@@ -1,10 +1,11 @@
 name: who-is-actor
-version: 1.0.7
+version: 1.0.8
 description: >
   A zero-*install*-dependency Git repository developer profiling skill.
   "Zero dependency" means no Python/Node packages, no pip/npm installs, and
   no custom scripts — however the skill DOES require standard system
-  binaries already present on most Unix-like hosts (see required_binaries).
+  binaries already present on most Unix-like hosts (see required_binaries
+  below for the full list: git, cut, sort, uniq, awk, grep, sed, wc, head).
   It uses only native git READ-ONLY commands to analyze commit history, then
   leverages AI to generate a data-driven developer portrait covering commit
   habits, work habits, development efficiency, code style, code quality,
@@ -12,12 +13,15 @@ description: >
   Security: all user inputs validated against strict allowlists; only
   whitelisted git read-only subcommands are permitted; no write/network
   operations; no developer emails collected. A dry-run mode is available
-  to preview all commands before execution.
+  to preview all commands before execution. Commit messages are processed
+  for statistical analysis only (length, keyword matching) — full message
+  text is NOT forwarded to the AI model; only aggregated metrics are sent.
   The engagement index is explicitly scoped as a collaboration reference
   only, not for HR decisions.
-  Privacy note: commit messages and filenames are read during analysis and
-  may contain sensitive information — run only on repositories you have
-  permission to analyze.
+  Privacy note: commit messages and filenames are read locally during data
+  collection and may contain sensitive information — the skill enforces
+  automatic redaction of common secret patterns before any data leaves the
+  local environment. Run only on repositories you have permission to analyze.
 author: reky
 license: MIT
 acceptLicenseTerms: true

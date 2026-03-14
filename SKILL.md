@@ -188,6 +188,36 @@ This skill **only permits the following predefined read-only git subcommands**. 
 - Note: The `git --author` parameter matches against both name and email fields. Since this skill prohibits email-format values, `--author` will only match via the name portion and will not utilize the email field.
 - The final report MUST NOT contain any email addresses.
 
+### Sensitive Data Filtering Rules (Mandatory)
+
+Before sending **any** data to the AI model for analysis, the agent MUST apply the following filtering:
+
+1. **Commit messages are processed locally for statistics only:**
+   - The agent collects commit message **lengths** (character counts) and **keyword matches** (e.g., `fix`, `feat`, `revert`) locally via shell commands.
+   - **Full commit message text MUST NOT be forwarded verbatim to the AI model.** Instead, send only aggregated metrics (average length, keyword counts, conventional commit compliance rate).
+   - Exception: If the user explicitly requests to see specific commit messages, the agent may include them but MUST first apply the redaction patterns below.
+
+2. **Automatic redaction of secret patterns:**
+   Before any text (commit messages, filenames, branch names) is included in the AI prompt, the agent MUST scan for and redact the following patterns:
+   - API keys / tokens: strings matching `(?i)(api[_-]?key|token|secret|password|credential|auth)[=:]\s*\S+`
+   - AWS keys: `AKIA[0-9A-Z]{16}`
+   - Private keys: `-----BEGIN .* PRIVATE KEY-----`
+   - Connection strings: `(?i)(mysql|postgres|mongodb|redis)://\S+`
+   - Generic secrets: any string longer than 20 characters containing only alphanumeric characters that appears after `=` or `:` in a key-value pattern
+   - Replace matched content with `[REDACTED]`
+
+3. **Filename filtering:**
+   - Filenames are collected only to determine **file extensions** for language/type statistics.
+   - Full file paths SHOULD NOT be sent to the AI model unless the user explicitly requests file-level analysis.
+   - If full paths are sent, redact any path components that match common secret file patterns: `.env`, `.credentials`, `*secret*`, `*password*`, `*token*`.
+
+### Repository Path Scope Rules
+
+- The agent MUST only access the specific repository path provided by the user.
+- The agent MUST NOT traverse parent directories (`..`) or access files outside the repository root.
+- The agent MUST NOT list or read arbitrary files from the filesystem — only `git` commands targeting the validated repository are permitted.
+- If the user provides a path to a subdirectory within a repository, the agent should use the repository root (as determined by `git -C <path> rev-parse --show-toplevel`) and inform the user.
+
 ## Use Cases
 
 - When users need to analyze each developer's real behavioral profile in a Git repository
@@ -439,7 +469,8 @@ For each developer, output:
 - **Required system binaries:** `git`, `cut`, `sort`, `uniq`, `awk`, `grep`, `sed`, `wc`, `head` — these must be available on the host (pre-installed on most Unix-like systems)
 - **All user inputs MUST be validated per the "Security Specification" rules before execution** to prevent command injection attacks
 - **Dry-run mode is recommended for first use** — review all commands before allowing execution
-- **Sensitive data warning:** Commit messages and filenames read during analysis may contain secrets, credentials, or proprietary information. Only run this skill on repositories you have explicit permission to analyze
+- **Sensitive data protection:** Commit messages are processed locally for statistical metrics only (lengths, keyword counts) — **full commit message text is NOT sent to the AI model by default.** Common secret patterns (API keys, tokens, credentials, connection strings) are automatically redacted before any data leaves the local environment. See "Sensitive Data Filtering Rules" for details.
+- **Repository scope:** The agent only accesses the specific repository path provided — no parent directory traversal or arbitrary filesystem access is permitted
 - **Developer emails are NOT collected** to protect personal privacy
 - For large repositories, consider limiting the date range to control command execution time
 - Be aware that the same person may have different name variants (can be unified via `.mailmap`)
