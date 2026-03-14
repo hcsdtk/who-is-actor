@@ -1,5 +1,5 @@
 name: who-is-actor
-version: 1.0.8
+version: 1.0.9
 description: >
   A zero-*install*-dependency Git repository developer profiling skill.
   "Zero dependency" means no Python/Node packages, no pip/npm installs, and
@@ -32,6 +32,17 @@ tags:
   - zero-dependency
   - commit-patterns
   - engagement-index
+
+dependencies:
+  - git
+  - cut
+  - sort
+  - uniq
+  - awk
+  - grep
+  - sed
+  - wc
+  - head
 
 required_binaries:
   - name: git
