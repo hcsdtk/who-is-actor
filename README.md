@@ -26,7 +26,7 @@ https://github.com/Wscats/who-is-actor
 零依赖 · 零脚本 · 只用原生 `git` 命令<br>
 不装 pip，不装 npm，不跑 Docker，不需要你去 Stack Overflow 搜"为什么装不上"
 
-[它能看到什么](#它能看到什么) · [真实画像](#扒出来的真实画像) · [怎么用](#怎么用) · [怎么做到的](#怎么做到的) · [常见问题](#常见问题)
+[它能看到什么](https://github.com/Wscats/who-is-actor?tab=readme-ov-file#%E5%AE%83%E8%83%BD%E7%9C%8B%E5%88%B0%E4%BB%80%E4%B9%88) · [怎么用](https://github.com/Wscats/who-is-actor?tab=readme-ov-file#%E6%80%8E%E4%B9%88%E7%94%A8) · [真实画像](https://github.com/Wscats/who-is-actor?tab=readme-ov-file#%E6%89%92%E5%87%BA%E6%9D%A5%E7%9A%84%E7%9C%9F%E5%AE%9E%E7%94%BB%E5%83%8F) · [怎么做到的](https://github.com/Wscats/who-is-actor?tab=readme-ov-file#%E6%80%8E%E4%B9%88%E5%81%9A%E5%88%B0%E7%9A%84) · [常见问题](https://github.com/Wscats/who-is-actor?tab=readme-ov-file#%E5%B8%B8%E8%A7%81%E9%97%AE%E9%A2%98)
 
 </div>
 
@@ -281,6 +281,6 @@ A：当然可以。自知者明。
 
 ---
 
-> **who-is-actor**：让每一行代码都有名有姓，让每一个贡献都被看见。  
+> **[who-is-actor](https://github.com/Wscats/who-is-actor)**：让每一行代码都有名有姓，让每一个贡献都被看见。  
 > 零依赖 · 零脚本 · 只用原生 git · 不需要任何理由就能开始分析
 > 免责声明：本工具纯属技术分析，如有雷同，纯属你自己写的代码太有特色。
